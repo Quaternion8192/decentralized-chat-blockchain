@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decentralized-chat-blockchain"
-version = "1.0.0"
+version = "1.0.1"
 description = "A decentralized chat solution based on P2P networks, blockchain technology, and NAT traversal"
 readme = "README.md"
-authors = [{name = "Decentralized Chat Team", email = "team@example.com"}]
+authors = [{name = "Quaternion8192", email = "tiara-stash-suitor@duck.com"}]
 license = {text = "MIT"}
 classifiers = [
     "Development Status :: 4 - Beta",
