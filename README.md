@@ -1,154 +1,332 @@
-# 去中心化社交协议
+# Decentralized Chat with Blockchain [去中心化区块链聊天系统]
 
-## 概述
+<div align="center">
 
-本项目旨在实现一个基于双轨混合分层架构的去中心化社交协议。它融合了先进的网络通信、强大的加密机制、简化的HotStuff共识算法、信鸽协议用于离线消息处理，并集成了VDF（可验证延迟函数）作为反垃圾邮件的初步机制。我们的目标是构建一个平衡去中心化、高性能和用户隐私的社交网络基础设施。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![Status](https://img.shields.io/badge/Status-Beta-green.svg)](https://github.com/Quaternion8192/decentralized-chat-blockchain)
+[![Stars](https://img.shields.io/github/stars/Quaternion8192/decentralized-chat-blockchain.svg?style=social)](https://github.com/Quaternion8192/decentralized-chat-blockchain)
+[![Forks](https://img.shields.io/github/forks/Quaternion8192/decentralized-chat-blockchain.svg?style=social)](https://github.com/Quaternion8192/decentralized-chat-blockchain)
+[![Issues](https://img.shields.io/github/issues/Quaternion8192/decentralized-chat-blockchain)](https://github.com/Quaternion8192/decentralized-chat-blockchain/issues)
 
-## 核心特性
+</div>
 
-*   **双轨混合分层架构**：
-    *   **核心骨干层（Full Nodes）**：由高性能节点组成，负责网络拓扑维护、消息中转、共识投票等。
-    *   **边缘接入层（Light Clients）**：以移动端为主，按需连接骨干层，优化弱网络环境下的连接和功耗。
-*   **安全通信**：
-    *   **端到端加密**：使用混合加密（AES对称加密消息内容，RSA非对称加密AES密钥）确保消息隐私。
-    *   **消息签名**：基于RSA算法对消息进行签名，确保消息来源的真实性和完整性。
-*   **信鸽协议 (Pigeon Protocol)**：
-    *   **离线消息缓存**：当接收方离线时，消息将被加密缓存到网络中的中继节点。
-    *   **零知识提取 (简化实现)**：用户上线后，能通过（模拟的）零知识证明向中继节点提取其加密消息，而无需泄露身份。
-*   **高性能共识**：
-    *   **HotStuff共识算法 (简化实现)**：采用三阶段流水线共识机制，支持高效的提案确认。
-    *   **声誉加权 (概念)**：未来的投票权将基于节点声誉积分和持有代币权重进行分配。
-*   **反垃圾机制**：
-    *   **可验证延迟函数 (VDF)**：通过要求发送方完成少量计算来增加垃圾消息发送成本。
-*   **去中心化身份 (DID)**：支持基于W3C DID标准的节点标识符。
+<div align="center">
 
-## 技术栈
+### 🚀 A decentralized chat solution based on P2P networks, blockchain technology, and NAT traversal
 
-*   **异步框架**: `asyncio`
-*   **加密库**: `cryptography`
-*   **网络通信**: 基于 `asyncio` 的 TCP 协议，实现消息分包和 JSON 序列化。
-*   **共识算法**: 简化的 HotStuff
-*   **零知识证明**: 概念性实现 (PigeonRelay 中通过 `_verify_proof` 模拟)
-*   **防垃圾机制**: VDF (可验证延迟函数)
+</div>
 
-## 安装指南
+---
 
-在开始之前，请确保你已安装 Python 3.8+。
+## English Version
+
+A decentralized chat solution based on P2P networks, blockchain technology, and NAT traversal.
+
+### ✨ Features
+
+- **Blockchain Technology**: Uses blockchain to record messages and consensus events
+- **End-to-End Encryption**: RSA+AES hybrid encryption for message security
+- **P2P Network**: Decentralized node communication
+- **NAT Traversal**: Supports STUN, ngrok, and UPnP for NAT penetration
+- **Pigeon Protocol**: Offline message caching and retrieval
+- **Consensus Mechanism**: Simplified HotStuff consensus algorithm
+- **Multimedia Support**: Image, audio, and video transmission
+- **Incentive Mechanism**: Token rewards based on node contributions
+- **Gossip Protocol**: Efficient message propagation
+- **VDF (Verifiable Delay Function)**: Computational delay for spam prevention
+- **Zero-Knowledge Proofs**: Privacy-preserving verification
+- **IPFS Integration**: Distributed storage
+- **Web UI Console**: Modern web-based control panel with real-time monitoring
+
+### 📦 Installation
 
 ```bash
-# 1. 克隆仓库 (如果尚未完成)
-# git clone <你的仓库地址>
-# cd decentralized-social-protocol
-
-# 2. 安装依赖
 pip install -r requirements.txt
 ```
 
-`requirements.txt` 文件内容如下：
-```
-cryptography>=41.0.0
-colorama>=0.4.6
-```
+### 🚀 Usage
 
-## 使用说明
-
-本项目通过命令行界面模拟多个节点间的交互。
-
-### 启动节点
-
-你需要在不同的终端窗口中启动不同的节点。第一个启动的节点通常作为网络的“种子节点”。
-
-**启动种子节点 (例如 NodeA，监听 8001 端口):**
+#### Start Bootstrap Node (Seed Node)
 
 ```bash
-python main.py NodeA 8001
+python -m src.core.node NodeA 8001
 ```
 
-**启动其他节点 (例如 NodeB，监听 8002 端口，连接到 NodeA):**
+#### Start Other Nodes and Connect to Bootstrap Node
 
 ```bash
-python main.py NodeB 8002 127.0.0.1:8001
+python -m src.core.node NodeB 8002 --bootstrap 127.0.0.1:8001
 ```
 
-你可以启动更多节点，并指定它们连接到一个或多个已存在的节点（启动参数中的 `127.0.0.1:8001`）。
-
-### 交互命令
-
-节点启动后，你可以在各自的终端中输入命令进行交互：
-
-*   `list`: 查看当前节点已发现的网络邻居节点。
-*   `send <TargetNodeID> <Message>`: 向指定的目标节点发送端到端加密消息。如果目标节点离线，消息将尝试通过中继节点缓存。
-*   `cons <ProposalData>`: 作为当前节点的 Leader，发起一个共识提案。其他节点会验证并（在简化实现中）打印提案。
-*   `exit`: 退出当前节点程序。
-
-**示例：发送消息**
+#### Enable NAT Traversal
 
 ```bash
-# 在 NodeA 的终端
-send NodeB Hello_from_NodeA
+python -m src.core.node NodeC 8003 --bootstrap 127.0.0.1:8001 --nat
 ```
 
-**示例：发起共识**
+#### Start Web UI Console
 
 ```bash
-# 在 NodeA 的终端
-cons Important_Network_Update_V3
+python webui.py
 ```
 
-## API 文档
+System will automatically:
+- Start node server (default port 9001)
+- Start web server (default port 8080)
+- Open browser to access console at `http://localhost:8080`
 
-### `src/node.py` 中的 `ProtocolNode` 类
+### 🏗️ Architecture
 
-*   `__init__(node_id: str, host: str, port: int, bootstrap_nodes: list = None)`: 初始化节点，包括 ID、网络地址、密钥对和可选的引导节点列表。
-*   `get_did() -> str`: 获取节点的去中心化标识符 (DID)，格式为 `did:p2p:{node_id}`。
-*   `start()`: 启动节点的网络监听服务，并尝试连接引导节点。
-*   `send_message(target_node_id: str, text: str)`: 向目标节点发送加密消息。
-*   `update_routing(new_table: dict)`: 更新节点的路由表信息。
+#### Blockchain Layer
+- Each message and consensus event is recorded on the blockchain
+- Mining using proof of work (simplified version)
+- Blockchain synchronization ensures data consistency across all nodes
 
-### `src/network.py` 中的 `P2PProtocol` 和 `NodeServer`
+#### Network Layer
+- P2P protocol for direct communication between nodes
+- Routing table maintains network topology
+- Message length prefix prevents packet sticking
+- Node health checks with ping/pong mechanism
+- Advanced reputation system based on node reliability
 
-*   `P2PProtocol.send_json(writer, data)`: 通过 `asyncio.StreamWriter` 发送带长度前缀的 JSON 数据。
-*   `P2PProtocol.read_json(reader)`: 通过 `asyncio.StreamReader` 读取带长度前缀的 JSON 数据。
-*   `NodeServer(host, port, handler_callback)`: 创建一个 TCP 服务器，用于监听传入连接并调用 `handler_callback` 处理消息。
+#### Encryption Layer
+- RSA for key exchange and signatures
+- AES for message content encryption
+- Hybrid encryption scheme ensures security
 
-### `src/crypto_utils.py` 中的 `CryptoManager` 类
+#### NAT Traversal Layer
+- STUN protocol for public mapping detection
+- ngrok for TCP tunnel
+- UPnP for automatic port forwarding
 
-*   `__init__()`: 生成节点的 RSA 密钥对。
-*   `get_pub_key_pem() -> str`: 获取 PEM 格式的公共密钥字符串。
-*   `load_pub_key(pem_str: str)`: 从 PEM 字符串加载公共密钥对象。
-*   `sign(message: str) -> str`: 使用节点的私钥对消息进行签名。
-*   `verify(pub_key, message: str, signature_b64: str) -> bool`: 使用公共密钥验证消息签名。
-*   `encrypt_for(target_pub_key_pem: str, data: str) -> dict`: 对数据进行混合加密（AES + RSA），用于发送给目标。
-*   `decrypt_message(encrypted_package: dict) -> str`: 使用节点的私钥解密收到的混合加密消息。
+#### Web UI Console Features
 
-### `src/consensus.py` 中的 `SimplifiedHotStuff` 类
+- **Beginner-friendly interface** - Simplified getting started interface for new users
+- **Dashboard panel** - Real-time display of node statistics
+- **Message management** - Send and receive messages
+- **Network management** - View and manage routing table
+- **Blockchain browser** - View blockchain information and block details
+- **Consensus management** - Initiate consensus proposals
+- **System settings** - Node configuration management
 
-*   `__init__(node)`: 初始化共识模块，绑定到所属节点。
-*   `start_proposal(block_data: str)`: 作为 Leader 发起一个包含 `block_data` 的共识提案。
-*   `handle_proposal(msg: dict)`: 处理收到的共识提案，进行签名验证（简化处理）。
+### 📋 Protocol Design
 
-### `interface.py` 中的辅助类 (概念性接口，未完全集成到当前运行代码)
+#### Pigeon Protocol
+- When the target node is offline, messages are cached in relay nodes in the network
+- Nodes can retrieve messages after coming online using zero-knowledge proofs
 
-*   `PigeonRelay`: 离线消息缓存和零知识提取的模拟实现。
-    *   `cache_message(receiver_id, encrypted_msg)`
-    *   `zkp_extract(receiver_id, proof)`
-*   `HotStuffConsensus`: 提供了计算投票权和三阶段提交的概念。
-    *   `calculate_voting_power(node)`
-    *   `run_three_phase_commit(proposal)`
-*   `AntiSpamVDF`: 可验证延迟函数的模拟实现。
-    *   `solve(challenge, difficulty)`
-    *   `verify(challenge, proof, difficulty)`
+#### Gossip Protocol
+- Efficient message propagation using configurable fanout and TTL
+- Support for data synchronization, membership changes, and custom messages
+- Advanced message processing with different content types
 
-## 贡献指南
+#### Consensus Mechanism
+- Simplified HotStuff three-phase commit
+- Voting rights allocation based on node reputation
+- Enhanced incentive mechanisms with uptime and reputation bonuses
 
-我们非常欢迎社区的贡献！如果你想为本项目做出贡献，请遵循以下步骤：
+### 🔐 Security
 
-1.  **Fork** 本仓库。
-2.  创建一个新的特性分支 (`git checkout -b feature/YourFeatureName`)。
-3.  提交你的修改 (`git commit -m 'Add new feature'`)。
-4.  推送到你的分支 (`git push origin feature/YourFeatureName`)。
-5.  创建一个 **Pull Request**，描述你的修改内容。
+- All messages are end-to-End encrypted
+- Message integrity verified using digital signatures
+- Blockchain ensures data immutability
+- Anti-replay attack mechanism
 
-## 许可证
+### 📁 Project Structure
 
-本项目采用 MIT 许可证。详见 `LICENSE` 文件。
+```
+src/
+├── blockchain/          # Blockchain implementation
+├── crypto/              # Cryptography utilities
+├── network/             # Network communication
+├── p2p/                 # P2P protocols
+├── multimedia/          # Multimedia processing
+├── incentive/           # Incentive mechanisms
+├── routing/             # Routing management
+├── gossip/              # Gossip protocol
+├── vdf/                 # Verifiable delay functions
+├── zkp/                 # Zero-knowledge proofs
+├── ipfs/                # IPFS integration
+├── config/              # Configuration management
+├── utils/               # Utility functions
+└── core/                # Core application logic
+```
+
+### 🎨 Web UI Design Style
+
+- **Minimalist and Rational**: Clean and neat page, large area of white space, emphasizing structural presentation of content
+- **Modern**: No unnecessary decoration, flat design, clear visual hierarchy
+- **High Contrast**: Supports dark/light theme mode
+- **Responsive Layout**: Adapted to different screen sizes
+- **User-friendly**: Simplified beginner interface, reducing learning curve
+
+### 🌐 API Endpoints
+
+- `GET /api/node/stats` - Get node statistics
+- `GET /api/node/routing` - Get routing table
+- `GET /api/blockchain/info` - Get blockchain information
+- `GET /api/blockchain/chain` - Get full blockchain data
+- `POST /api/messages/send` - Send message
+- `POST /api/messages/send_multimedia` - Send multimedia message
+- `POST /api/consensus/propose` - Initiate consensus proposal
+- `POST /api/node/sync` - Synchronize blockchain
+
+---
+
+## 中文版 README
+
+基于P2P网络、区块链技术和NAT穿越的去中心化聊天解决方案。
+
+### ✨ 功能特性
+
+- **区块链技术**: 使用区块链记录消息和共识事件
+- **端到端加密**: RSA+AES混合加密保障消息安全
+- **P2P网络**: 去中心化节点通信
+- **NAT穿越**: 支持STUN、ngrok和UPnP进行NAT穿透
+- **信鸽协议**: 离线消息缓存和获取
+- **共识机制**: 简化版HotStuff共识算法
+- **多媒体支持**: 图片、音频和视频传输
+- **激励机制**: 基于节点贡献的代币奖励
+- **Gossip协议**: 高效消息传播
+- **VDF (可验证延迟函数)**: 计算延迟防垃圾
+- **零知识证明**: 隐私保护验证
+- **IPFS集成**: 分布式存储
+- **Web UI控制台**: 现代化网页控制面板，实时监控
+
+### 📦 安装
+
+```bash
+pip install -r requirements.txt
+```
+
+### 🚀 使用方法
+
+#### 启动引导节点（种子节点）
+
+```bash
+python -m src.core.node NodeA 8001
+```
+
+#### 启动其他节点并连接到引导节点
+
+```bash
+python -m src.core.node NodeB 8002 --bootstrap 127.0.0.1:8001
+```
+
+#### 启用NAT穿越
+
+```bash
+python -m src.core.node NodeC 8003 --bootstrap 127.0.0.1:8001 --nat
+```
+
+#### 启动Web UI控制台
+
+```bash
+python webui.py
+```
+
+系统将自动：
+- 启动节点服务器（默认端口9001）
+- 启动Web服务器（默认端口8080）
+- 自动打开浏览器访问控制台 `http://localhost:8080`
+
+### 🏗️ 架构设计
+
+#### 区块链层
+- 每条消息和共识事件都记录在区块链上
+- 使用工作量证明进行挖矿（简化版）
+- 区块链同步确保所有节点数据一致性
+
+#### 网络层
+- P2P协议实现节点间直接通信
+- 路由表维护网络拓扑
+- 消息长度前缀防止粘包
+- 节点健康检查通过ping/pong机制
+- 基于节点可靠性的高级信誉系统
+
+#### 加密层
+- RSA用于密钥交换和签名
+- AES用于消息内容加密
+- 混合加密方案确保安全性
+
+#### NAT穿越层
+- STUN协议用于公网映射检测
+- ngrok提供TCP隧道
+- UPnP自动端口转发
+
+#### Web UI控制台功能
+
+- **初学者友好界面** - 简化的入门界面，方便新手使用
+- **控制台面板** - 实时显示节点统计信息
+- **消息管理** - 发送和接收消息
+- **网络管理** - 查看和管理路由表
+- **区块链浏览器** - 查看区块链信息和区块详情
+- **共识管理** - 发起共识提案
+- **系统设置** - 节点配置管理
+
+### 📋 协议设计
+
+#### 信鸽协议
+- 当目标节点离线时，消息在网络中的中继节点中缓存
+- 节点上线后可以使用零知识证明检索消息
+
+#### Gossip协议
+- 使用可配置的fanout和TTL进行高效消息传播
+- 支持数据同步、成员变更和自定义消息
+- 不同内容类型的高级消息处理
+
+#### 共识机制
+- 简化版HotStuff三阶段提交
+- 基于节点信誉的投票权分配
+- 增强的激励机制，包含在线时间和信誉奖励
+
+### 🔐 安全性
+
+- 所有消息均端到端加密
+- 使用数字签名验证消息完整性
+- 区块链确保数据不可篡改
+- 防重放攻击机制
+
+### 📁 项目结构
+
+```
+src/
+├── blockchain/          # 区块链实现
+├── crypto/              # 加密工具
+├── network/             # 网络通信
+├── p2p/                 # P2P协议
+├── multimedia/          # 多媒体处理
+├── incentive/           # 激励机制
+├── routing/             # 路由管理
+├── gossip/              # Gossip协议
+├── vdf/                 # 可验证延迟函数
+├── zkp/                 # 零知识证明
+├── ipfs/                # IPFS集成
+├── config/              # 配置管理
+├── utils/               # 工具函数
+└── core/                # 核心应用逻辑
+```
+
+### 🎨 Web UI设计风格
+
+- **极简主义与理性**: 页面干净利落，大面积留白，强调内容的结构化呈现
+- **现代化**: 无多余装饰，扁平化设计，采用清晰的视觉层级
+- **高对比度**: 支持深色/浅色主题模式
+- **响应式布局**: 适配不同屏幕尺寸
+- **用户友好**: 简化的初学者界面，降低上手难度
+
+### 🌐 API端点
+
+- `GET /api/node/stats` - 获取节点统计信息
+- `GET /api/node/routing` - 获取路由表
+- `GET /api/blockchain/info` - 获取区块链信息
+- `GET /api/blockchain/chain` - 获取区块链完整数据
+- `POST /api/messages/send` - 发送消息
+- `POST /api/messages/send_multimedia` - 发送多媒体消息
+- `POST /api/consensus/propose` - 发起共识提案
+- `POST /api/node/sync` - 同步区块链
+
+### 📄 许可证
+
+MIT
