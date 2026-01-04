@@ -1,4 +1,3 @@
-
 // Web UI 控制台 JavaScript
 class ChatConsole {
     constructor() {
@@ -54,6 +53,21 @@ class ChatConsole {
         document.getElementById('refresh-stats').addEventListener('click', () => {
             this.loadInitialData();
         });
+        
+        // NAT穿越功能事件
+        const toggleNatBtn = document.getElementById('toggle-nat-btn');
+        if (toggleNatBtn) {
+            toggleNatBtn.addEventListener('click', () => {
+                this.toggleNatTraversal();
+            });
+        }
+        
+        const refreshNatBtn = document.getElementById('refresh-nat-btn');
+        if (refreshNatBtn) {
+            refreshNatBtn.addEventListener('click', () => {
+                this.loadNatStatus();
+            });
+        }
     }
     
     switchTab(tabName) {
@@ -90,9 +104,77 @@ class ChatConsole {
             case 'blockchain':
                 this.loadBlockchain();
                 break;
+            case 'nat':
+                this.loadNatStatus();
+                break;
             case 'settings':
                 this.loadSystemInfo();
                 break;
+        }
+    }
+    
+    // 添加NAT穿越状态加载方法
+    async loadNatStatus() {
+        try {
+            const response = await fetch('/api/nat/status');
+            const status = await response.json();
+            
+            // 更新NAT状态显示
+            document.getElementById('nat-enabled').textContent = status.enabled ? '已启用' : '未启用';
+            document.getElementById('nat-enabled').style.color = status.enabled ? '#10B981' : '#EF4444';
+            
+            document.getElementById('nat-public-url').textContent = status.public_url || 'N/A';
+            document.getElementById('nat-type').textContent = status.nat_type || 'N/A';
+            document.getElementById('nat-external-ip').textContent = status.external_ip || 'N/A';
+            document.getElementById('nat-external-port').textContent = status.external_port || 'N/A';
+            document.getElementById('nat-traversable').textContent = status.is_traversable ? '是' : '否';
+            document.getElementById('nat-traversable').style.color = status.is_traversable ? '#10B981' : '#EF4444';
+            
+        } catch (error) {
+            console.error('加载NAT状态失败:', error);
+            this.showNotification('加载NAT状态失败: ' + error.message, 'error');
+        }
+    }
+    
+    // 添加NAT穿越切换方法
+    async toggleNatTraversal() {
+        try {
+            const response = await fetch('/api/nat/status');
+            const currentStatus = await response.json();
+            const enable = !currentStatus.enabled; // 切换状态
+            
+            const button = document.getElementById('toggle-nat-btn');
+            const originalText = this.showLoading(button, button.textContent);
+            
+            const toggleResponse = await fetch('/api/nat/configure', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    enable: enable
+                })
+            });
+            
+            const result = await toggleResponse.json();
+            
+            if (result.status === 'success') {
+                this.showNotification(result.message, 'success');
+                // 刷新NAT状态
+                setTimeout(() => {
+                    this.loadNatStatus();
+                }, 1000);
+            } else {
+                this.showNotification(result.message || '操作失败', 'error');
+            }
+        } catch (error) {
+            console.error('切换NAT穿越失败:', error);
+            this.showNotification('切换NAT穿越失败: ' + error.message, 'error');
+        } finally {
+            const button = document.getElementById('toggle-nat-btn');
+            button.disabled = false;
+            button.textContent = '🔄 切换NAT穿越';
+            button.style.opacity = '1';
         }
     }
     
@@ -137,6 +219,10 @@ class ChatConsole {
     async loadInitialData() {
         await this.loadNodeStats();
         await this.loadBlockchainInfo();
+        // 如果当前标签页是nat，则加载NAT状态
+        if (this.currentTab === 'nat') {
+            await this.loadNatStatus();
+        }
         this.loadTabData(this.currentTab);
     }
     
@@ -260,9 +346,12 @@ class ChatConsole {
         const message = document.getElementById('message-content').value.trim();
         
         if (!target || !message) {
-            alert('请填写目标节点ID和消息内容');
+            this.showNotification('请填写目标节点ID和消息内容', 'error');
             return;
         }
+        
+        const button = document.getElementById('send-message-btn');
+        const originalText = this.showLoading(button, button.textContent);
         
         try {
             const response = await fetch('/api/messages/send', {
@@ -279,13 +368,15 @@ class ChatConsole {
             const result = await response.json();
             
             if (result.status === 'success') {
-                alert('消息发送成功');
+                this.showNotification('消息发送成功', 'success');
                 document.getElementById('message-content').value = '';
             } else {
-                alert('消息发送失败: ' + (result.error || '未知错误'));
+                this.showNotification('消息发送失败: ' + (result.error || '未知错误'), 'error');
             }
         } catch (error) {
-            alert('发送消息时发生错误: ' + error.message);
+            this.showNotification('发送消息时发生错误: ' + error.message, 'error');
+        } finally {
+            this.hideLoading(button, originalText);
         }
     }
     
@@ -295,21 +386,24 @@ class ChatConsole {
         const file = fileInput.files[0];
         
         if (!target || !file) {
-            alert('请填写目标节点ID并选择文件');
+            this.showNotification('请填写目标节点ID并选择文件', 'error');
             return;
         }
         
         // 这里应该实现文件上传逻辑，简化为模拟发送
-        alert('多媒体消息发送功能正在开发中');
+        this.showNotification('多媒体消息发送功能正在开发中', 'info');
     }
     
     async startConsensusProposal() {
         const data = document.getElementById('consensus-data').value.trim();
         
         if (!data) {
-            alert('请输入共识提案数据');
+            this.showNotification('请输入共识提案数据', 'error');
             return;
         }
+        
+        const button = document.getElementById('propose-btn');
+        const originalText = this.showLoading(button, button.textContent);
         
         try {
             const response = await fetch('/api/consensus/propose', {
@@ -325,17 +419,22 @@ class ChatConsole {
             const result = await response.json();
             
             if (result.status === 'success') {
-                alert('共识提案已发起');
+                this.showNotification('共识提案已发起', 'success');
                 document.getElementById('consensus-data').value = '';
             } else {
-                alert('发起共识提案失败: ' + (result.error || '未知错误'));
+                this.showNotification('发起共识提案失败: ' + (result.error || '未知错误'), 'error');
             }
         } catch (error) {
-            alert('发起共识提案时发生错误: ' + error.message);
+            this.showNotification('发起共识提案时发生错误: ' + error.message, 'error');
+        } finally {
+            this.hideLoading(button, originalText);
         }
     }
     
     async syncBlockchain() {
+        const button = document.getElementById('sync-btn');
+        const originalText = this.showLoading(button, button.textContent);
+        
         try {
             const response = await fetch('/api/node/sync', {
                 method: 'POST',
@@ -347,12 +446,14 @@ class ChatConsole {
             const result = await response.json();
             
             if (result.status === 'sync started') {
-                alert('区块链同步已开始');
+                this.showNotification('区块链同步已开始', 'success');
             } else {
-                alert('同步请求失败');
+                this.showNotification('同步请求失败', 'error');
             }
         } catch (error) {
-            alert('请求同步时发生错误: ' + error.message);
+            this.showNotification('请求同步时发生错误: ' + error.message, 'error');
+        } finally {
+            this.hideLoading(button, originalText);
         }
     }
     
@@ -374,6 +475,9 @@ class ChatConsole {
         // 每30秒自动刷新节点状态
         setInterval(() => {
             this.loadNodeStats();  // 总是更新节点统计信息，无论哪个标签页被激活
+            if (this.currentTab === 'nat') {
+                this.loadNatStatus();  // 如果在NAT标签页，也刷新NAT状态
+            }
             if (this.currentTab === 'settings') {
                 this.loadSystemInfo();
             }
@@ -552,122 +656,6 @@ class ChatConsole {
         button.disabled = false;
         button.textContent = originalText;
         button.style.opacity = '1';
-    }
-    
-    async sendMessage() {
-        const target = document.getElementById('target-node').value.trim();
-        const message = document.getElementById('message-content').value.trim();
-        
-        if (!target || !message) {
-            this.showNotification('请填写目标节点ID和消息内容', 'error');
-            return;
-        }
-        
-        const button = document.getElementById('send-message-btn');
-        const originalText = this.showLoading(button, button.textContent);
-        
-        try {
-            const response = await fetch('/api/messages/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    target: target,
-                    message: message
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.showNotification('消息发送成功', 'success');
-                document.getElementById('message-content').value = '';
-            } else {
-                this.showNotification('消息发送失败: ' + (result.error || '未知错误'), 'error');
-            }
-        } catch (error) {
-            this.showNotification('发送消息时发生错误: ' + error.message, 'error');
-        } finally {
-            this.hideLoading(button, originalText);
-        }
-    }
-    
-    async sendMultimedia() {
-        const target = document.getElementById('target-node').value.trim();
-        const fileInput = document.getElementById('media-file');
-        const file = fileInput.files[0];
-        
-        if (!target || !file) {
-            this.showNotification('请填写目标节点ID并选择文件', 'error');
-            return;
-        }
-        
-        // 这里应该实现文件上传逻辑，简化为模拟发送
-        this.showNotification('多媒体消息发送功能正在开发中', 'info');
-    }
-    
-    async startConsensusProposal() {
-        const data = document.getElementById('consensus-data').value.trim();
-        
-        if (!data) {
-            this.showNotification('请输入共识提案数据', 'error');
-            return;
-        }
-        
-        const button = document.getElementById('propose-btn');
-        const originalText = this.showLoading(button, button.textContent);
-        
-        try {
-            const response = await fetch('/api/consensus/propose', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    data: data
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.showNotification('共识提案已发起', 'success');
-                document.getElementById('consensus-data').value = '';
-            } else {
-                this.showNotification('发起共识提案失败: ' + (result.error || '未知错误'), 'error');
-            }
-        } catch (error) {
-            this.showNotification('发起共识提案时发生错误: ' + error.message, 'error');
-        } finally {
-            this.hideLoading(button, originalText);
-        }
-    }
-    
-    async syncBlockchain() {
-        const button = document.getElementById('sync-btn');
-        const originalText = this.showLoading(button, button.textContent);
-        
-        try {
-            const response = await fetch('/api/node/sync', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'sync started') {
-                this.showNotification('区块链同步已开始', 'success');
-            } else {
-                this.showNotification('同步请求失败', 'error');
-            }
-        } catch (error) {
-            this.showNotification('请求同步时发生错误: ' + error.message, 'error');
-        } finally {
-            this.hideLoading(button, originalText);
-        }
     }
 }
 

@@ -18,11 +18,13 @@ from ..routing.routing_manager import RoutingTableManager, NodeInfo
 from ..gossip.gossip_protocol import GossipManager, GossipType
 from ..vdf.vdf import VDFManager
 from ..zkp.zkp import ZKPManager
+from ..network.nat_traversal import NATTraverser, setup_nat_traversal
+from ..p2p.node_server import NodeServer
 
 
 class ChatNode:
     """聊天节点类"""
-    def __init__(self, node_id, addr, blockchain, bootstrap_nodes=None):
+    def __init__(self, node_id, addr, port, blockchain, bootstrap_nodes=None, enable_nat_traversal=False):
         self.node_id = node_id
         self.addr = addr
         self.blockchain = blockchain
@@ -40,13 +42,37 @@ class ChatNode:
         self.sync_batch_size = 10  # 区块链同步批大小
         self.max_concurrent_syncs = 3  # 最大并发同步数
         self.sync_timeout = 30  # 同步超时时间（秒）
+        self.bootstrap_nodes = bootstrap_nodes or []
         self.running = True
+        self.enable_nat_traversal = enable_nat_traversal
+        self.nat_traverser = None
+        self.public_url = None  # 用于存储公共访问URL
+        self.start_time = time.time()  # 添加启动时间
+        self.pigeon_cache = {}  # 信鸽协议缓存
+        # 更新addr为元组格式
+        self.addr = (addr, port)
+        # 创建服务器实例
+        self.server = NodeServer(self.addr[0], self.addr[1], self.handle_message)
 
     def get_did(self) -> str:
         return f"did:p2p:{self.node_id}"
 
     async def start(self):
         """启动节点"""
+        # 首先尝试NAT穿越
+        if self.enable_nat_traversal:
+            print("[*] 正在配置NAT穿越...")
+            from ..config.config import get_config
+            config = get_config()
+            success, public_url, nat_result = await setup_nat_traversal(
+                config.config, self.addr[1]
+            )
+            if success:
+                self.public_url = public_url
+                print(f"[✓] NAT穿越配置成功，公共URL: {public_url}")
+            else:
+                print(f"[-] NAT穿越配置失败，节点可能无法被外部访问")
+        
         await self.server.start()
         
         # 加入网络
@@ -56,6 +82,21 @@ class ChatNode:
                 
         self.running = True
         print(f"[*] 节点 {self.node_id} 已启动")
+
+    async def stop(self):
+        """停止节点"""
+        print(f"[*] 正在停止节点 {self.node_id}...")
+        
+        # 清理NAT穿越资源
+        if self.enable_nat_traversal and hasattr(self, 'nat_traverser') and self.nat_traverser:
+            self.nat_traverser.cleanup()
+            print("[*] NAT穿越资源已清理")
+        
+        # 停止服务器
+        await self.server.stop()
+        
+        self.running = False
+        print(f"[✓] 节点 {self.node_id} 已停止")
 
     async def ping_node(self, host, port):
         """握手并交换路由表"""

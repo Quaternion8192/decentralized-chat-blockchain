@@ -94,7 +94,6 @@ venv.bak/
 .coverage*
 
 # Local config files
-config.json
 secrets.json
 *.pem
 *.key
@@ -256,3 +255,5 @@ dmypy.json
 .vscode/tasks.json
 .vscode/launch.json
 .vscode/recommendations.json
+/保姆级使用指南.md
+/config.json

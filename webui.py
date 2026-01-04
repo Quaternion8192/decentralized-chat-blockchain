@@ -14,6 +14,7 @@ import platform
 from src.core.chat_node import ChatNode
 from src.blockchain.blockchain import Blockchain
 from src.p2p.node_server import NodeServer
+from src.network.nat_traversal import setup_nat_traversal, NATTraverser
 
 
 class WebUI:
@@ -37,6 +38,9 @@ class WebUI:
         self.app.router.add_post('/api/consensus/propose', self.start_consensus_proposal)
         self.app.router.add_post('/api/node/sync', self.sync_blockchain)
         self.app.router.add_get('/api/system/info', self.get_system_info)
+        # 添加NAT穿越相关的API
+        self.app.router.add_get('/api/nat/status', self.get_nat_status)
+        self.app.router.add_post('/api/nat/configure', self.configure_nat_traversal)
         self.app.router.add_static('/static', path='./static', name='static')
         
     def setup_cors(self):
@@ -53,7 +57,88 @@ class WebUI:
         # 为所有路由添加CORS支持
         for route in list(self.app.router.routes()):
             cors.add(route)
-    
+
+    async def get_nat_status(self, request):
+        """获取NAT穿越状态"""
+        nat_status = {
+            "enabled": getattr(self.chat_node, 'enable_nat_traversal', False),
+            "public_url": getattr(self.chat_node, 'public_url', None),
+            "nat_type": getattr(self.chat_node, 'nat_type', 'unknown'),
+            "external_ip": getattr(self.chat_node, 'external_ip', None),
+            "external_port": getattr(self.chat_node, 'external_port', None),
+            "is_traversable": getattr(self.chat_node, 'is_nat_traversable', False)
+        }
+        return web.json_response(nat_status)
+
+    async def configure_nat_traversal(self, request):
+        """配置NAT穿越"""
+        try:
+            data = await request.json()
+            enable_nat = data.get('enable', False)
+            
+            if enable_nat and not getattr(self.chat_node, 'enable_nat_traversal', False):
+                # 启用NAT穿越
+                from src.config.config import get_config
+                config = get_config()
+                
+                # 获取节点当前监听的端口
+                local_port = self.chat_node.addr[1]
+                
+                success, public_url, nat_result = await setup_nat_traversal(
+                    config.config, local_port
+                )
+                
+                if success:
+                    self.chat_node.enable_nat_traversal = True
+                    self.chat_node.public_url = public_url
+                    self.chat_node.nat_type = nat_result.nat_type
+                    self.chat_node.external_ip = nat_result.external_ip
+                    self.chat_node.external_port = nat_result.external_port
+                    self.chat_node.is_nat_traversable = nat_result.is_traversable
+                    
+                    # 更新节点在路由表中的信息
+                    for node_id, node_info in self.chat_node.routing_table_manager.routing_table.items():
+                        if node_info.node_id == self.chat_node.node_id:
+                            node_info.public_url = public_url
+                            break
+                    
+                    return web.json_response({
+                        "status": "success", 
+                        "message": "NAT穿越配置成功",
+                        "public_url": public_url,
+                        "nat_result": {
+                            "nat_type": nat_result.nat_type,
+                            "external_ip": nat_result.external_ip,
+                            "external_port": nat_result.external_port,
+                            "is_traversable": nat_result.is_traversable
+                        }
+                    })
+                else:
+                    return web.json_response({
+                        "status": "error", 
+                        "message": "NAT穿越配置失败"
+                    }, status=500)
+            elif not enable_nat:
+                # 禁用NAT穿越
+                self.chat_node.enable_nat_traversal = False
+                self.chat_node.public_url = None
+                
+                return web.json_response({
+                    "status": "success", 
+                    "message": "NAT穿越已禁用"
+                })
+            else:
+                return web.json_response({
+                    "status": "success", 
+                    "message": "NAT穿越状态未改变"
+                })
+                
+        except Exception as e:
+            return web.json_response({
+                "status": "error", 
+                "message": f"配置NAT穿越时出错: {str(e)}"
+            }, status=500)
+        
     async def index(self, request):
         """主页"""
         html_content = """
@@ -79,6 +164,7 @@ class WebUI:
                 <button class="nav-btn" data-tab="messages">消息</button>
                 <button class="nav-btn" data-tab="network">网络</button>
                 <button class="nav-btn" data-tab="blockchain">区块链</button>
+                <button class="nav-btn" data-tab="nat">NAT穿越</button>
                 <button class="nav-btn" data-tab="settings">设置</button>
             </div>
         </div>
@@ -102,6 +188,12 @@ class WebUI:
                         <h3>🌐 查看网络</h3>
                         <p>了解当前网络中的节点</p>
                         <button class="beginner-btn">查看网络</button>
+                    </div>
+                    
+                    <div class="quick-action-card" onclick="switchToTab('nat')">
+                        <h3>🌐 NAT穿越</h3>
+                        <p>配置和管理NAT穿越功能</p>
+                        <button class="beginner-btn">配置NAT</button>
                     </div>
                     
                     <div class="quick-action-card" onclick="switchToTab('blockchain')">
@@ -263,6 +355,55 @@ class WebUI:
                     <div class="input-group">
                         <input type="text" id="consensus-data" placeholder="输入共识提案数据">
                         <button id="propose-btn" class="action-btn">🗳️ 发起提案</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NAT穿越面板 -->
+        <section id="nat" class="tab-content">
+            <div class="nat-container">
+                <div class="card nat-status">
+                    <h3>🌐 NAT穿越状态</h3>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">状态:</span>
+                            <span class="status-value" id="nat-enabled">未启用</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">公共URL:</span>
+                            <span class="status-value url-value" id="nat-public-url">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">NAT类型:</span>
+                            <span class="status-value" id="nat-type">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">外部IP:</span>
+                            <span class="status-value" id="nat-external-ip">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">外部端口:</span>
+                            <span class="status-value" id="nat-external-port">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">可穿越:</span>
+                            <span class="status-value" id="nat-traversable">-</span>
+                        </div>
+                    </div>
+                    <div class="nat-actions">
+                        <button id="toggle-nat-btn" class="action-btn">🔄 切换NAT穿越</button>
+                        <button id="refresh-nat-btn" class="action-btn">🔄 刷新状态</button>
+                    </div>
+                </div>
+                
+                <div class="card nat-info">
+                    <h3>ℹ️ NAT穿越信息</h3>
+                    <div class="info-content">
+                        <p><strong>STUN协议检测:</strong> 用于检测NAT类型和公网IP地址</p>
+                        <p><strong>ngrok隧道:</strong> 当STUN无法穿透时，自动创建TCP隧道</p>
+                        <p><strong>UPnP端口转发:</strong> 自动配置路由器端口映射（未来支持）</p>
+                        <p><strong>使用说明:</strong> 点击"切换NAT穿越"按钮启用或禁用功能</p>
                     </div>
                 </div>
             </div>
@@ -498,9 +639,11 @@ def main():
     # 注意：在实际部署时，需要根据命令行参数或配置来创建节点
     chat_node = ChatNode(
         node_id="WebConsole", 
-        addr=("127.0.0.1", 9001),  # 使用9001端口，避免与Web UI端口冲突
+        addr="127.0.0.1",
+        port=9001,  # 使用9001端口，避免与Web UI端口冲突
         blockchain=blockchain,
-        bootstrap_nodes=[]
+        bootstrap_nodes=[],
+        enable_nat_traversal=False  # 默认不启用NAT穿越
     )
     
     # 设置必要属性

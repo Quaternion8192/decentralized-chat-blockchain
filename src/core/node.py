@@ -45,7 +45,7 @@ def run_cli(node: ChatNode):
             if cmd == "list":
                 print(f"当前已知节点 ({len(node.routing_table_manager.routing_table)}):")
                 for nid, info in node.routing_table_manager.routing_table.items():
-                    print(f" - {nid} @ {info['host']}:{info['port']} (URL: {info.get('public_url', 'N/A')})")
+                    print(f" - {nid} @ {info.host}:{info.port} (URL: {info.public_url or 'N/A'})")
             
             elif cmd == "send":
                 if len(parts) < 3:
@@ -185,6 +185,7 @@ def main():
     parser.add_argument('node_id', help='节点ID')
     parser.add_argument('port', type=int, help='监听端口')
     parser.add_argument('--bootstrap', help='引导节点地址 (host:port)')
+    parser.add_argument('--nat', action='store_true', help='启用NAT穿越')
     
     args = parser.parse_args()
     
@@ -197,13 +198,14 @@ def main():
     # 创建区块链实例
     blockchain = Blockchain(consensus_type=config.get("blockchain.consensus_type", "vdf_pow"))
     
-    # 创建节点
+    # 创建节点，支持NAT穿越
     node = ChatNode(
         args.node_id, 
         "127.0.0.1", 
         args.port, 
         blockchain, 
-        bootstrap_nodes
+        bootstrap_nodes,
+        enable_nat_traversal=args.nat
     )
     
     async def run_node():
