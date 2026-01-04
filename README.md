@@ -100,6 +100,31 @@ System will automatically:
 - ngrok for TCP tunnel
 - UPnP for automatic port forwarding
 
+### ⚠️ Ngrok Configuration Note
+
+**Important**: Starting from October 2023, ngrok requires a verified account and authentication token to function. If you encounter an authentication error, you have two options:
+
+1. **Register for ngrok account** (Recommended for production use):
+   - Sign up at: https://dashboard.ngrok.com/signup
+   - Get your authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
+   - Install the authtoken: `ngrok config add-authtoken YOUR_AUTHTOKEN`
+
+2. **Disable ngrok** (Recommended for local testing):
+   - Create a `config.json` file in the project root directory with the following content:
+   ```json
+   {
+     "nat_traversal": {
+       "enable_ngrok": false,
+       "stun_servers": [
+         "stun.l.google.com:19302",
+         "stun1.l.google.com:19302"
+       ],
+       "upnp_enabled": true
+     }
+   }
+   ```
+   - Then start your nodes with the `--nat` flag: `python -m src.core.node NodeA 8001 --nat`
+
 #### Web UI Console Features
 
 - **Beginner-friendly interface** - Simplified getting started interface for new users
@@ -254,6 +279,31 @@ python webui.py
 - STUN协议用于公网映射检测
 - ngrok提供TCP隧道
 - UPnP自动端口转发
+
+### ⚠️ Ngrok配置注意事项
+
+**重要**: 从2023年10月开始，ngrok需要验证账户和认证令牌才能使用。如果您遇到认证错误，有两种选择：
+
+1. **注册ngrok账户** (推荐用于生产环境):
+   - 注册地址: https://dashboard.ngrok.com/signup
+   - 获取认证令牌: https://dashboard.ngrok.com/get-started/your-authtoken
+   - 安装认证令牌: `ngrok config add-authtoken 您的认证令牌`
+
+2. **禁用ngrok** (推荐用于本地测试):
+   - 在项目根目录创建 `config.json` 文件，内容如下:
+   ```json
+   {
+     "nat_traversal": {
+       "enable_ngrok": false,
+       "stun_servers": [
+         "stun.l.google.com:19302",
+         "stun1.l.google.com:19302"
+       ],
+       "upnp_enabled": true
+     }
+   }
+   ```
+   - 然后使用 `--nat` 参数启动节点: `python -m src.core.node NodeA 8001 --nat`
 
 #### Web UI控制台功能
 
